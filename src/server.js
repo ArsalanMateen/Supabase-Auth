@@ -2,6 +2,8 @@ import express from 'express';
 import dotenv from 'dotenv';
 
 import authRouter from './routes/auth.js';
+import publicRouter from './routes/public.js';
+import protectedRouter from './routes/protected.js';
 
 dotenv.config();
 
@@ -12,6 +14,8 @@ app.use(express.json()); // middleware to parse incoming JSON requests
 
 // routes
 app.use('/auth', authRouter);
+app.use('/public', publicRouter);
+app.use('/protected', protectedRouter);
 
 // health check route
 app.get('/', (req, res) => {
