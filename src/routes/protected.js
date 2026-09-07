@@ -1,36 +1,31 @@
 import { Router } from 'express';
-import { supabase } from '../config/supabase.js';
+import { authenticateUser } from '../middleware/auth.js';
 
 const router = Router();
 
+// protect all routes within this router
+router.use(authenticateUser);
+
 // GET /protected/profile
-router.get('/profile', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
+router.get('/profile', (req, res) => {
+  return res.status(200).json({
+    id: req.user.id,
+    email: req.user.email,
+    created_at: req.user.created_at,
+  });
+});
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Access token required' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    if (!token) {
-      return res.status(401).json({ error: 'Access token required' });
-    }
-
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-
-    if (error || !user) {
-      return res.status(401).json({ error: 'Invalid or expired token' });
-    }
-
-    return res.status(200).json({
-      id: user.id,
-      email: user.email,
-      created_at: user.created_at,
-    });
-  } catch (err) {
-    return res.status(500).json({ error: 'Internal server error' });
-  }
+// GET /protected/dashboard
+router.get('/dashboard', (req, res) => {
+  return res.status(200).json({
+    message: 'Welcome to your private dashboard',
+    user_id: req.user.id,
+    email: req.user.email,
+    stats: {
+      account_status: 'active',
+      last_sign_in: req.user.last_sign_in_at || req.user.created_at,
+    },
+  });
 });
 
 export default router;
