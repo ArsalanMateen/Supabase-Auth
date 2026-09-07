@@ -2,6 +2,7 @@ import { Router } from "express";
 
 import { supabase } from "../config/supabase.js";
 import { authenticateUser } from "../middleware/auth.js";
+import { loginLimiter } from "../middleware/rateLimiter.js";
 
 const router = Router();
 
@@ -42,7 +43,7 @@ router.post("/signup", async (req, res) => {
 });
 
 // POST /auth/login
-router.post("/login", async (req, res) => {
+router.post("/login", loginLimiter, async (req, res) => {
   try {
     const credentials = validateCredentials(req, res);
     if (!credentials) return;
@@ -55,6 +56,36 @@ router.post("/login", async (req, res) => {
 
     if (error) {
       return res.status(401).json({ error: "Invalid login credentials" });
+    }
+
+    return res.status(200).json({
+      access_token: data.session.access_token,
+      refresh_token: data.session.refresh_token,
+      token_type: "bearer",
+      expires_in: data.session.expires_in,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /auth/refresh
+router.post("/refresh", async (req, res) => {
+  try {
+    const { refresh_token } = req.body;
+
+    if (!refresh_token) {
+      return res.status(400).json({ error: "Refresh token is required" });
+    }
+
+    const { data, error } = await supabase.auth.refreshSession({
+      refresh_token,
+    });
+
+    if (error || !data.session) {
+      return res
+        .status(401)
+        .json({ error: "Invalid or expired refresh token" });
     }
 
     return res.status(200).json({
