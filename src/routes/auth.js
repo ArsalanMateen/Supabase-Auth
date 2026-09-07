@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { supabase } from "../config/supabase.js";
+import { authenticateUser } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -62,6 +63,19 @@ router.post("/login", async (req, res) => {
       token_type: "bearer",
       expires_in: data.session.expires_in,
     });
+  } catch (err) {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /auth/logout
+router.post("/logout", authenticateUser, async (req, res) => {
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      return res.status(400).json({ error: error.message });
+    }
+    return res.status(204).send();
   } catch (err) {
     return res.status(500).json({ error: "Internal server error" });
   }
